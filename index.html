@@ -157,12 +157,12 @@ async function identifyPlant() {
 
     const data = await res.json();
 
-    if (!data.results || data.results.length === 0) {
-      reportBox.textContent =
-        "No plant identified.\n\nPossible reasons:\n- Perenual Plant ID beta access is not active\n- Photo was unclear\n- API key is wrong or missing\n- The API returned an error\n\nAPI Response:\n" +
-        JSON.stringify(data, null, 2);
-      return;
-    }
+   if (!data.results || data.results.length === 0) {
+  reportBox.textContent =
+    "No plant identified.\n\nThe API connected, but Perenual did not return a plant result.\n\nMost likely causes:\n- Your Perenual key does not have Plant ID beta access\n- The identify endpoint is not active on your plan\n- The photo was unclear\n\nAPI Response:\n" +
+    JSON.stringify(data, null, 2);
+  return;
+}
 
     const plant = data.results[0];
 
