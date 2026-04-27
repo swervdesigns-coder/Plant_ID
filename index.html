@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plant Health App V2</title>
+
+<style>
+body {
+  font-family: Arial;
+  background: #f4f8f3;
+  padding: 20px;
+}
+
+.container {
+  max-width: 900px;
+  margin: auto;
+  background: white;
+  padding: 25px;
+  border-radius: 12px;
+}
+
+h1 {
+  text-align: center;
+  color: #2f6b35;
+}
+
+.section {
+  margin-top: 20px;
+  padding: 15px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+}
+
+button {
+  margin-top: 10px;
+  padding: 12px;
+  width: 100%;
+  background: #2f6b35;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #245529;
+}
+
+img, video {
+  max-width: 100%;
+  margin-top: 10px;
+  border-radius: 10px;
+}
+
+#report {
+  white-space: pre-wrap;
+  background: #eef6ec;
+  padding: 15px;
+  border-radius: 10px;
+  margin-top: 10px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+<h1>🌿 Plant Health & Care App</h1>
+
+<div class="section">
+<h2>1. Add Photo</h2>
+
+<input type="file" id="imageUpload" accept="image/*">
+
+<button onclick="startCamera()">Start Camera</button>
+<video id="camera" autoplay style="display:none;"></video>
+
+<button onclick="takePhoto()">Take Photo</button>
+<canvas id="canvas" style="display:none;"></canvas>
+
+<img id="preview" style="display:none;">
+
+<button onclick="identifyPlant()">Identify Plant + Health Report</button>
+
+</div>
+
+<div class="section">
+<h2>2. Conditions</h2>
+
+<label>Sunlight</label>
+<select id="sunlight">
+<option>Full sun</option>
+<option>Partial sun</option>
+<option>Shade</option>
+</select>
+
+<label>Soil</label>
+<select id="soil">
+<option>Well draining</option>
+<option>Wet/soggy</option>
+<option>Dry</option>
+</select>
+
+<label>Symptoms</label>
+<textarea id="symptoms" placeholder="Enter symptoms (yellow leaves, rot, bugs, etc)"></textarea>
+
+</div>
+
+<div class="section">
+<h2>3. Report</h2>
+<div id="report">Your report will appear here.</div>
+<button onclick="downloadReport()">Download Report</button>
+</div>
+
+</div>
+
+<script>
+
+// 🔐 ADD YOUR API KEY HERE (locally only)
+const API_KEY = "sk-4wP869ee88058684416783";
+
+let selectedFile = null;
+
+const preview = document.getElementById("preview");
+const camera = document.getElementById("camera");
+const canvas = document.getElementById("canvas");
+
+document.getElementById("imageUpload").addEventListener("change", function(e) {
+  selectedFile = e.target.files[0];
+
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    preview.src = ev.target.result;
+    preview.style.display = "block";
+  };
+  reader.readAsDataURL(selectedFile);
+});
+
+async function startCamera() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    camera.srcObject = stream;
+    camera.style.display = "block";
+  } catch (err) {
+    alert("Camera access denied or unavailable.");
+  }
+}
+
+function takePhoto() {
+  canvas.width = camera.videoWidth;
+  canvas.height = camera.videoHeight;
+
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(camera, 0, 0);
+
+  canvas.toBlob(blob => {
+    selectedFile = new File([blob], "photo.png");
+  });
+
+  preview.src = canvas.toDataURL();
+  preview.style.display = "block";
+}
+
+async function identifyPlant() {
+
+  if (!selectedFile) {
+    alert("Upload or take a photo first.");
+    return;
+  }
+
+  document.getElementById("report").textContent = "Analyzing plant...";
+
+  try {
+
+    const formData = new FormData();
+    formData.append("file[]", selectedFile);
+
+    const res = await fetch(`https://perenual.com/api/identify?key=${API_KEY}`, {
+      method: "POST",
+      body: formData
+    });
+
+    const data = await res.json();
+
+    if (!data.results || data.results.length === 0) {
+      document.getElementById("report").textContent = "No plant identified. Try a clearer image.";
+      return;
+    }
+
+    const plant = data.results[0];
+
+    let name = plant.name || "Unknown";
+    let scientific = plant.scientific_name || "Unknown";
+    let confidence = plant.score ? Math.round(plant.score * 100) + "%" : "N/A";
+
+    let healthScore = 100;
+    let symptoms = document.getElementById("symptoms").value.toLowerCase();
+    let soil = document.getElementById("soil").value;
+    let sunlight = document.getElementById("sunlight").value;
+
+    let issues = [];
+
+    if (symptoms.includes("brown") || symptoms.includes("dead")) {
+      healthScore -= 40;
+      issues.push("Possible dead or dying tissue");
+    }
+
+    if (symptoms.includes("rot") || symptoms.includes("soft")) {
+      healthScore -= 30;
+      issues.push("Possible root or trunk rot");
+    }
+
+    if (soil.includes("Wet")) {
+      healthScore -= 15;
+      issues.push("Soil may be too wet");
+    }
+
+    if (sunlight === "Shade") {
+      healthScore -= 10;
+      issues.push("Low sunlight exposure");
+    }
+
+    healthScore = Math.max(0, healthScore);
+
+    let status = "Healthy";
+    if (healthScore < 70) status = "Stressed";
+    if (healthScore < 40) status = "Critical";
+
+    const report = `
+PLANT REPORT
+============
+
+Name:
+${name}
+
+Scientific Name:
+${scientific}
+
+Confidence:
+${confidence}
+
+HEALTH
+------
+Score: ${healthScore}/100
+Status: ${status}
+
+Issues:
+${issues.length ? issues.join("\n") : "None"}
+
+CARE GUIDE
+----------
+Sunlight:
+${sunlight}
+
+Soil:
+${soil}
+
+Watering:
+- Water deeply 2-3x per week
+- Avoid overwatering
+
+Planting:
+- Keep root flare visible
+- Do not bury trunk
+
+Mulch:
+- Keep mulch away from trunk
+
+PLACEMENT ADVICE
+----------------
+- Ensure correct sunlight
+- Avoid soggy soil
+- Give plant room to grow
+
+`;
+
+    document.getElementById("report").textContent = report;
+
+  } catch (err) {
+    console.error(err);
+    document.getElementById("report").textContent = "Error connecting to API.";
+  }
+}
+
+function downloadReport() {
+  const text = document.getElementById("report").textContent;
+  const blob = new Blob([text], { type: "text/plain" });
+
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "plant-report.txt";
+  link.click();
+}
+
+</script>
+
+</body>
+</html>
