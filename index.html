@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Plant ID & Health App</title>
+<title>Plant Health App V3</title>
 
 <style>
 body {
@@ -13,7 +13,6 @@ body {
   padding: 20px;
   color: #1f2d1f;
 }
-
 .container {
   max-width: 1000px;
   margin: auto;
@@ -22,11 +21,7 @@ body {
   border-radius: 16px;
   box-shadow: 0 5px 20px rgba(0,0,0,0.12);
 }
-
-h1, h2 {
-  color: #2f6b35;
-}
-
+h1, h2 { color: #2f6b35; }
 .section {
   margin-top: 20px;
   padding: 18px;
@@ -34,13 +29,11 @@ h1, h2 {
   border-radius: 14px;
   background: #fbfdfb;
 }
-
 label {
   display: block;
   font-weight: bold;
   margin-top: 12px;
 }
-
 input, select, textarea, button {
   width: 100%;
   padding: 12px;
@@ -50,7 +43,6 @@ input, select, textarea, button {
   font-size: 16px;
   box-sizing: border-box;
 }
-
 button {
   background: #2f6b35;
   color: white;
@@ -58,18 +50,13 @@ button {
   font-weight: bold;
   cursor: pointer;
 }
-
-button:hover {
-  background: #245529;
-}
-
-video, img {
+button:hover { background: #245529; }
+img {
   max-width: 100%;
   margin-top: 12px;
   border-radius: 14px;
   border: 1px solid #ccc;
 }
-
 #report {
   white-space: pre-wrap;
   background: #eef6ec;
@@ -79,28 +66,18 @@ video, img {
   min-height: 220px;
   line-height: 1.5;
 }
-
-.badge {
-  display: inline-block;
-  padding: 8px 12px;
-  border-radius: 999px;
-  background: #eef6ec;
-  margin: 5px 5px 5px 0;
-  border: 1px solid #c9ddc5;
-}
 </style>
 </head>
 
 <body>
 
 <div class="container">
-  <h1>🌿 Plant ID, Health & Yard Placement App </h1>
+  <h1>🌿 Plant Health & Care Report App</h1>
 
   <div class="section">
     <h2>1. Add Plant Photo</h2>
 
     <label>Choose Image or Take Photo</label>
-    <!-- ✅ FIXED INPUT -->
     <input type="file" id="imageUpload" accept="image/*" />
 
     <img id="preview" style="display:none;" />
@@ -116,28 +93,33 @@ video, img {
       <option>Full sun</option>
       <option>Partial sun</option>
       <option>Shade</option>
+      <option>Not sure</option>
     </select>
 
-    <label>Soil</label>
+    <label>Soil / Drainage</label>
     <select id="soil">
       <option>Well draining</option>
       <option>Wet/soggy</option>
       <option>Dry</option>
+      <option>Clay/compact</option>
+      <option>Not sure</option>
     </select>
 
-    <label>Symptoms</label>
-    <textarea id="symptoms"></textarea>
+    <label>Visible Symptoms</label>
+    <textarea id="symptoms" rows="5" placeholder="Example: yellow leaves, brown under bark, black trunk, soft base, leaf spots, bugs, wilting, no leaves, etc."></textarea>
+
+    <label>Extra Notes</label>
+    <textarea id="notes" rows="4" placeholder="Example: planted last month, in wooded area, watered twice per week, recently transplanted, etc."></textarea>
   </div>
 
   <div class="section">
     <h2>3. Report</h2>
     <div id="report">Your report will appear here.</div>
+    <button onclick="downloadReport()">Download Report</button>
   </div>
-
 </div>
 
 <script>
-
 let selectedFile = null;
 
 const preview = document.getElementById("preview");
@@ -156,16 +138,15 @@ document.getElementById("imageUpload").addEventListener("change", function(e) {
 });
 
 async function identifyPlant() {
-
   if (!selectedFile) {
     alert("Please upload or take a photo first.");
     return;
   }
 
-  document.getElementById("report").textContent = "Analyzing...";
+  const reportBox = document.getElementById("report");
+  reportBox.textContent = "Analyzing plant photo and building report...";
 
   try {
-
     const formData = new FormData();
     formData.append("file[]", selectedFile);
 
@@ -177,7 +158,9 @@ async function identifyPlant() {
     const data = await res.json();
 
     if (!data.results || data.results.length === 0) {
-      document.getElementById("report").textContent = "No plant identified.";
+      reportBox.textContent =
+        "No plant identified.\n\nPossible reasons:\n- Perenual Plant ID beta access is not active\n- Photo was unclear\n- API key is wrong or missing\n- The API returned an error\n\nAPI Response:\n" +
+        JSON.stringify(data, null, 2);
       return;
     }
 
@@ -187,61 +170,181 @@ async function identifyPlant() {
     let scientific = plant.scientific_name || "Unknown";
     let confidence = plant.score ? Math.round(plant.score * 100) + "%" : "N/A";
 
-    let healthScore = 100;
-    let symptoms = document.getElementById("symptoms").value.toLowerCase();
-    let soil = document.getElementById("soil").value;
-    let sunlight = document.getElementById("sunlight").value;
-
-    let issues = [];
-
-    if (symptoms.includes("brown") || symptoms.includes("dead")) {
-      healthScore -= 40;
-      issues.push("Possible dead tissue");
-    }
-
-    if (symptoms.includes("rot")) {
-      healthScore -= 30;
-      issues.push("Possible rot");
-    }
-
-    if (soil.includes("Wet")) {
-      healthScore -= 15;
-      issues.push("Soil too wet");
-    }
-
-    if (sunlight === "Shade") {
-      healthScore -= 10;
-      issues.push("Low sunlight");
-    }
-
-    let status = "Healthy";
-    if (healthScore < 70) status = "Stressed";
-    if (healthScore < 40) status = "Critical";
-
-    const report = `
-PLANT REPORT
-============
-
-Name: ${name}
-Scientific: ${scientific}
-Confidence: ${confidence}
-
-Health Score: ${healthScore}
-Status: ${status}
-
-Issues:
-${issues.join("\n") || "None"}
-
-`;
-
-    document.getElementById("report").textContent = report;
+    generateReport(name, scientific, confidence);
 
   } catch (err) {
     console.error(err);
-    document.getElementById("report").textContent = "Error connecting to API.";
+    reportBox.textContent =
+      "Error connecting to API.\n\nCheck:\n- Vercel deployment\n- /api/identify.js file\n- Environment variable PERENUAL_API_KEY\n- Internet connection\n\nError:\n" +
+      err.message;
   }
 }
 
+function generateReport(name, scientific, confidence) {
+  let symptoms = document.getElementById("symptoms").value.toLowerCase();
+  let soil = document.getElementById("soil").value;
+  let sunlight = document.getElementById("sunlight").value;
+  let notes = document.getElementById("notes").value || "No extra notes entered.";
+
+  let healthScore = 100;
+  let issues = [];
+  let recommendations = [];
+
+  if (symptoms.includes("brown") || symptoms.includes("dead") || symptoms.includes("no green")) {
+    healthScore -= 40;
+    issues.push("Possible dead or dying tissue.");
+    recommendations.push("Do a scratch test on the trunk and branches. Green means alive. Brown/tan and dry usually means dead in that area.");
+  }
+
+  if (symptoms.includes("rot") || symptoms.includes("soft") || symptoms.includes("black")) {
+    healthScore -= 30;
+    issues.push("Possible trunk or root crown rot.");
+    recommendations.push("Inspect the base of the plant. Soft, black, or rotting bark near the soil line is a serious warning sign.");
+  }
+
+  if (symptoms.includes("yellow")) {
+    healthScore -= 15;
+    issues.push("Yellowing leaves may indicate water, nutrient, soil, or sunlight stress.");
+    recommendations.push("Check soil moisture and drainage. Avoid overwatering.");
+  }
+
+  if (symptoms.includes("spots") || symptoms.includes("fungus") || symptoms.includes("mold")) {
+    healthScore -= 20;
+    issues.push("Possible fungal or leaf disease issue.");
+    recommendations.push("Improve airflow, avoid overhead watering, and remove badly affected leaves.");
+  }
+
+  if (symptoms.includes("bugs") || symptoms.includes("insects") || symptoms.includes("pest")) {
+    healthScore -= 20;
+    issues.push("Possible pest issue.");
+    recommendations.push("Check under leaves and around stems for insects, eggs, webs, or sticky residue.");
+  }
+
+  if (symptoms.includes("wilting")) {
+    healthScore -= 20;
+    issues.push("Wilting may be caused by water stress, transplant shock, root damage, or heat.");
+    recommendations.push("Check moisture 3–4 inches deep before watering again.");
+  }
+
+  if (soil.includes("Wet")) {
+    healthScore -= 15;
+    issues.push("Soil may be staying too wet.");
+    recommendations.push("Improve drainage or move the plant to a better-draining spot.");
+  }
+
+  if (soil.includes("Clay")) {
+    healthScore -= 10;
+    issues.push("Clay or compacted soil can restrict roots.");
+    recommendations.push("Loosen the planting area wider than the root ball and avoid compacting the soil.");
+  }
+
+  if (sunlight.includes("Shade")) {
+    healthScore -= 10;
+    issues.push("The plant may not be getting enough sunlight.");
+    recommendations.push("If this is a fruiting or flowering plant, move it to a sunnier spot if possible.");
+  }
+
+  healthScore = Math.max(0, healthScore);
+
+  let status = "Healthy / Low Concern";
+  if (healthScore < 75) status = "Stressed / Needs Monitoring";
+  if (healthScore < 50) status = "High Concern";
+  if (healthScore < 30) status = "Critical / Possibly Dying";
+
+  const report = `
+PLANT IDENTIFICATION + HEALTH REPORT
+====================================
+
+IDENTIFICATION
+--------------
+Common Name:
+${name}
+
+Scientific Name:
+${scientific}
+
+Confidence:
+${confidence}
+
+
+HEALTH STATUS
+-------------
+Health Score:
+${healthScore}/100
+
+Status:
+${status}
+
+
+WHAT MAY BE GOING ON
+--------------------
+${issues.length ? issues.map(i => "- " + i).join("\n") : "- No major problems detected from your entered conditions."}
+
+
+WHAT THE PLANT NEEDS
+--------------------
+${recommendations.length ? recommendations.map(r => "- " + r).join("\n") : "- Continue monitoring sunlight, water, soil drainage, and new growth."}
+
+
+CONDITIONS YOU ENTERED
+----------------------
+Sunlight:
+${sunlight}
+
+Soil / Drainage:
+${soil}
+
+Visible Symptoms:
+${symptoms || "No symptoms entered."}
+
+Extra Notes:
+${notes}
+
+
+GENERAL CARE GUIDE
+------------------
+Watering:
+- Water deeply at the root zone.
+- Do not keep the trunk or crown constantly wet.
+- Newly planted trees and shrubs need consistent watering while establishing.
+
+Sunlight:
+- Match the plant to the right light conditions.
+- Fruit trees and many flowering plants usually need full sun.
+- Shade can reduce growth, blooms, and fruit production.
+
+Soil:
+- Well-draining soil is best for most plants.
+- Wet/soggy soil can cause root rot.
+- Clay soil may need better drainage or raised planting.
+
+Mulch:
+- Mulch in a wide ring around the plant.
+- Keep mulch 3–6 inches away from the trunk.
+- Do not pile mulch against bark.
+
+Planting Depth:
+- Keep the root flare visible.
+- Do not bury the trunk.
+
+Health Check:
+- Green under bark usually means alive.
+- Brown/tan and dry under bark may mean dead tissue.
+- Soft, black, or rotting bark near the base is a major concern.
+`;
+
+  document.getElementById("report").textContent = report;
+}
+
+function downloadReport() {
+  const text = document.getElementById("report").textContent;
+  const blob = new Blob([text], { type: "text/plain" });
+
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "plant-health-report.txt";
+  link.click();
+}
 </script>
 
 </body>
