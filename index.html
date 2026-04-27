@@ -176,7 +176,7 @@ async function identifyPlant() {
     const formData = new FormData();
     formData.append("file[]", selectedFile);
 
-    const res = await fetch(`https://perenual.com/api/identify?key=${API_KEY}`, {
+    const res = await fetch(`/api/identify`, {
       method: "POST",
       body: formData
     });
