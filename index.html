@@ -134,24 +134,44 @@ img {
 
 <script>
 let imageBase64 = null;
-
 const preview = document.getElementById("preview");
 
 document.getElementById("imageUpload").addEventListener("change", function(e) {
   const file = e.target.files[0];
-
   if (!file) return;
 
-  const reader = new FileReader();
-
-  reader.onload = function(ev) {
-    imageBase64 = ev.target.result; // ✅ must be data:image/... base64
+  compressImage(file, 1200, 0.75).then((compressedBase64) => {
+    imageBase64 = compressedBase64;
     preview.src = imageBase64;
     preview.style.display = "block";
-  };
-
-  reader.readAsDataURL(file);
+  });
 });
+
+function compressImage(file, maxWidth, quality) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const reader = new FileReader();
+
+    reader.onload = function(e) {
+      img.src = e.target.result;
+    };
+
+    img.onload = function() {
+      const canvas = document.createElement("canvas");
+      const scale = maxWidth / img.width;
+      canvas.width = maxWidth;
+      canvas.height = img.height * scale;
+
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+      resolve(canvas.toDataURL("image/jpeg", quality));
+    };
+
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
 
 async function identifyPlant() {
   if (!imageBase64) {
@@ -182,7 +202,16 @@ async function identifyPlant() {
       })
     });
 
-    const data = await res.json();
+    const text = await res.text();
+
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      reportBox.textContent =
+        "API returned a non-JSON error:\n\n" + text;
+      return;
+    }
 
     if (!res.ok) {
       reportBox.textContent =
