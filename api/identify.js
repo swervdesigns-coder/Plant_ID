@@ -1,3 +1,9 @@
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
 export default async function handler(req, res) {
   const API_KEY = process.env.PERENUAL_API_KEY;
 
@@ -5,21 +11,30 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  try {
-    const formData = req.body;
+  if (!API_KEY) {
+    return res.status(500).json({
+      error: "Missing PERENUAL_API_KEY in Vercel environment variables."
+    });
+  }
 
-    const response = await fetch(
-      `https://perenual.com/api/identify?key=${API_KEY}`,
-      {
-        method: "POST",
-        body: formData
-      }
-    );
+  try {
+    const response = await fetch(`https://perenual.com/api/identify?key=${API_KEY}`, {
+      method: "POST",
+      headers: {
+        "content-type": req.headers["content-type"],
+      },
+      body: req,
+      duplex: "half",
+    });
 
     const data = await response.json();
-    res.status(200).json(data);
+
+    return res.status(response.status).json(data);
 
   } catch (error) {
-    res.status(500).json({ error: "API request failed" });
+    return res.status(500).json({
+      error: "API request failed",
+      details: error.message,
+    });
   }
 }
