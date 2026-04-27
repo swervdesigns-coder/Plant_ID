@@ -7,53 +7,51 @@ export const config = {
 export default async function handler(req, res) {
   const API_KEY = process.env.PERENUAL_API_KEY;
 
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
+
   if (!API_KEY) {
     return res.status(500).json({
-      error: "Missing API Key"
+      error: "Missing PERENUAL_API_KEY in Vercel environment variables."
     });
   }
 
   try {
-    const formData = new FormData();
-
-    // Pipe the incoming file directly
     const chunks = [];
+
     for await (const chunk of req) {
       chunks.push(chunk);
     }
 
-    const buffer = Buffer.concat(chunks);
+    const bodyBuffer = Buffer.concat(chunks);
 
-    formData.append("file[]", buffer, {
-      filename: "plant.jpg",
-      contentType: req.headers["content-type"],
+    const response = await fetch(`https://perenual.com/api/identify?key=${API_KEY}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": req.headers["content-type"],
+        "Content-Length": bodyBuffer.length.toString()
+      },
+      body: bodyBuffer
     });
-
-    const response = await fetch(
-      `https://perenual.com/api/identify?key=${API_KEY}`,
-      {
-        method: "POST",
-        body: formData,
-      }
-    );
 
     const text = await response.text();
 
-    // Try parsing JSON safely
     try {
-      const json = JSON.parse(text);
-      return res.status(200).json(json);
-    } catch {
+      const data = JSON.parse(text);
+      return res.status(response.status).json(data);
+    } catch (parseError) {
       return res.status(500).json({
-        error: "Invalid API response",
-        raw: text
+        error: "Perenual did not return JSON",
+        status: response.status,
+        raw: text.slice(0, 1000)
       });
     }
 
-  } catch (err) {
+  } catch (error) {
     return res.status(500).json({
-      error: "Server error",
-      details: err.message
+      error: "API request failed",
+      details: error.message
     });
   }
 }
