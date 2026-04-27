@@ -1,45 +1,61 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Plant Health App V2</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Plant Health App V3</title>
 
 <style>
 body {
-  font-family: Arial;
-  background: #f4f8f3;
+  font-family: Arial, sans-serif;
+  background: #f2f7f1;
+  margin: 0;
   padding: 20px;
+  color: #1f2d1f;
 }
 
 .container {
-  max-width: 900px;
+  max-width: 1000px;
   margin: auto;
-  background: white;
-  padding: 25px;
-  border-radius: 12px;
+  background: #ffffff;
+  padding: 24px;
+  border-radius: 16px;
+  box-shadow: 0 5px 20px rgba(0,0,0,0.12);
 }
 
-h1 {
-  text-align: center;
+h1, h2 {
   color: #2f6b35;
 }
 
 .section {
   margin-top: 20px;
-  padding: 15px;
-  border: 1px solid #ddd;
+  padding: 18px;
+  border: 1px solid #d7e5d4;
+  border-radius: 14px;
+  background: #fbfdfb;
+}
+
+label {
+  display: block;
+  font-weight: bold;
+  margin-top: 12px;
+}
+
+input, select, textarea, button {
+  width: 100%;
+  padding: 12px;
+  margin-top: 8px;
   border-radius: 10px;
+  border: 1px solid #b8cbb4;
+  font-size: 16px;
+  box-sizing: border-box;
 }
 
 button {
-  margin-top: 10px;
-  padding: 12px;
-  width: 100%;
   background: #2f6b35;
   color: white;
   border: none;
-  border-radius: 8px;
+  font-weight: bold;
   cursor: pointer;
 }
 
@@ -47,18 +63,89 @@ button:hover {
   background: #245529;
 }
 
-img, video {
+.secondary {
+  background: #555;
+}
+
+video, img {
   max-width: 100%;
-  margin-top: 10px;
-  border-radius: 10px;
+  margin-top: 12px;
+  border-radius: 14px;
+  border: 1px solid #ccc;
 }
 
 #report {
   white-space: pre-wrap;
   background: #eef6ec;
-  padding: 15px;
-  border-radius: 10px;
-  margin-top: 10px;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid #c9ddc5;
+  min-height: 220px;
+  line-height: 1.5;
+}
+
+.camera-wrap {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 14px;
+}
+
+#yardCamera {
+  width: 100%;
+  display: none;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: none;
+  pointer-events: none;
+}
+
+.badge {
+  display: inline-block;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #eef6ec;
+  margin: 5px 5px 5px 0;
+  border: 1px solid #c9ddc5;
+}
+
+.placementBox {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 180px;
+  height: 180px;
+  transform: translate(-50%, -50%);
+  border: 4px dashed #2f6b35;
+  border-radius: 50%;
+  background: rgba(47,107,53,0.12);
+}
+
+.placementText {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 12px;
+  background: rgba(0,0,0,0.75);
+  color: white;
+  padding: 12px;
+  border-radius: 12px;
+  font-size: 15px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+@media(max-width: 700px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
 </head>
@@ -66,68 +153,103 @@ img, video {
 <body>
 
 <div class="container">
-<h1>🌿 Plant Health & Care App</h1>
+  <h1>🌿 Plant Health & Yard Placement App V3</h1>
+  <p>
+    Take or upload a plant photo, identify the plant, generate a health report, and use the yard camera to help decide where to plant it.
+  </p>
 
-<div class="section">
-<h2>1. Add Photo</h2>
+  <div class="section">
+    <h2>1. Add Plant Photo</h2>
 
-<input type="file" id="imageUpload" accept="image/*">
+    <label>Choose Image or Take Photo</label>
+    <input type="file" id="imageUpload" accept="image/*" capture="environment" />
 
-<button onclick="startCamera()">Start Camera</button>
-<video id="camera" autoplay style="display:none;"></video>
+    <img id="preview" alt="Plant Preview" style="display:none;" />
 
-<button onclick="takePhoto()">Take Photo</button>
-<canvas id="canvas" style="display:none;"></canvas>
+    <button onclick="identifyPlant()">Identify Plant + Full Health Report</button>
+  </div>
 
-<img id="preview" style="display:none;">
+  <div class="section">
+    <h2>2. Health + Site Conditions</h2>
 
-<button onclick="identifyPlant()">Identify Plant + Health Report</button>
+    <div class="grid">
+      <div>
+        <label>Sunlight</label>
+        <select id="sunlight">
+          <option>Full sun, 6-8+ hours</option>
+          <option>Partial sun, 3-6 hours</option>
+          <option>Mostly shade, less than 3 hours</option>
+          <option>Not sure</option>
+        </select>
+      </div>
 
-</div>
+      <div>
+        <label>Soil / Drainage</label>
+        <select id="soil">
+          <option>Well draining</option>
+          <option>Wet/soggy</option>
+          <option>Dry</option>
+          <option>Clay/compact</option>
+          <option>Not sure</option>
+        </select>
+      </div>
+    </div>
 
-<div class="section">
-<h2>2. Conditions</h2>
+    <label>Visible Health Symptoms</label>
+    <textarea id="symptoms" rows="5" placeholder="Example: yellow leaves, brown under bark, black trunk, soft base, leaf spots, bugs, wilting, no leaves, etc."></textarea>
 
-<label>Sunlight</label>
-<select id="sunlight">
-<option>Full sun</option>
-<option>Partial sun</option>
-<option>Shade</option>
-</select>
+    <label>Notes</label>
+    <textarea id="notes" rows="4" placeholder="Example: planted last month, in wooded area, watered twice per week, recently transplanted, etc."></textarea>
+  </div>
 
-<label>Soil</label>
-<select id="soil">
-<option>Well draining</option>
-<option>Wet/soggy</option>
-<option>Dry</option>
-</select>
+  <div class="section">
+    <h2>3. Yard Placement Camera</h2>
+    <p>
+      Use this as a visual helper. Point your camera at the planting spot, then use your sunlight and soil answers to score the location.
+    </p>
 
-<label>Symptoms</label>
-<textarea id="symptoms" placeholder="Enter symptoms (yellow leaves, rot, bugs, etc)"></textarea>
+    <button onclick="startYardCamera()">Start Yard Placement Camera</button>
 
-</div>
+    <div class="camera-wrap">
+      <video id="yardCamera" autoplay playsinline></video>
+      <div id="yardOverlay" class="overlay">
+        <div class="placementBox"></div>
+        <div class="placementText" id="placementText">
+          Point at the planting spot. Keep trees, buildings, shade, and wet areas in mind.
+        </div>
+      </div>
+    </div>
 
-<div class="section">
-<h2>3. Report</h2>
-<div id="report">Your report will appear here.</div>
-<button onclick="downloadReport()">Download Report</button>
-</div>
+    <div id="placementBadges">
+      <span class="badge" id="directionBadge">Direction: Not detected</span>
+      <span class="badge" id="placementBadge">Placement: Not reviewed</span>
+    </div>
 
+    <button onclick="analyzePlacement()">Analyze Placement</button>
+  </div>
+
+  <div class="section">
+    <h2>4. Report</h2>
+    <div id="report">Your plant report will appear here.</div>
+    <button onclick="downloadReport()">Download Report</button>
+  </div>
 </div>
 
 <script>
-
-// 🔐 ADD YOUR API KEY HERE (locally only)
-const API_KEY = "REPLACE_WITH_YOUR_PERENUAL_API_KEY";
-
 let selectedFile = null;
+let lastPlantName = "Unknown plant";
+let lastScientificName = "Unknown";
+let lastConfidence = "N/A";
+let lastCareGuide = "";
+let lastDetails = {};
+let placementAdvice = "Placement has not been analyzed yet.";
 
 const preview = document.getElementById("preview");
-const camera = document.getElementById("camera");
-const canvas = document.getElementById("canvas");
 
 document.getElementById("imageUpload").addEventListener("change", function(e) {
   selectedFile = e.target.files[0];
+
+  if (!selectedFile) return;
 
   const reader = new FileReader();
   reader.onload = function(ev) {
@@ -137,150 +259,311 @@ document.getElementById("imageUpload").addEventListener("change", function(e) {
   reader.readAsDataURL(selectedFile);
 });
 
-async function startCamera() {
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-    camera.srcObject = stream;
-    camera.style.display = "block";
-  } catch (err) {
-    alert("Camera access denied or unavailable.");
-  }
-}
-
-function takePhoto() {
-  canvas.width = camera.videoWidth;
-  canvas.height = camera.videoHeight;
-
-  const ctx = canvas.getContext("2d");
-  ctx.drawImage(camera, 0, 0);
-
-  canvas.toBlob(blob => {
-    selectedFile = new File([blob], "photo.png");
-  });
-
-  preview.src = canvas.toDataURL();
-  preview.style.display = "block";
-}
-
 async function identifyPlant() {
-
   if (!selectedFile) {
-    alert("Upload or take a photo first.");
+    alert("Choose or take a plant photo first.");
     return;
   }
 
-  document.getElementById("report").textContent = "Analyzing plant...";
+  const reportBox = document.getElementById("report");
+  reportBox.textContent = "Analyzing plant, pulling care data, and building health report...";
 
   try {
-
     const formData = new FormData();
     formData.append("file[]", selectedFile);
 
-    const res = await fetch(`/api/identify`, {
+    const identifyRes = await fetch("/api/identify", {
       method: "POST",
       body: formData
     });
 
-    const data = await res.json();
+    const identifyData = await identifyRes.json();
 
-    if (!data.results || data.results.length === 0) {
-      document.getElementById("report").textContent = "No plant identified. Try a clearer image.";
+    if (!identifyData.results || identifyData.results.length === 0) {
+      reportBox.textContent = "No plant identified. Try a clearer image with leaves, bark, flowers, fruit, or the full plant visible.";
       return;
     }
 
-    const plant = data.results[0];
+    const result = identifyData.results[0];
 
-    let name = plant.name || "Unknown";
-    let scientific = plant.scientific_name || "Unknown";
-    let confidence = plant.score ? Math.round(plant.score * 100) + "%" : "N/A";
+    lastPlantName = result.name || "Unknown plant";
+    lastScientificName = result.scientific_name || "Unknown";
+    lastConfidence = result.score ? Math.round(result.score * 100) + "%" : "N/A";
 
-    let healthScore = 100;
-    let symptoms = document.getElementById("symptoms").value.toLowerCase();
-    let soil = document.getElementById("soil").value;
-    let sunlight = document.getElementById("sunlight").value;
+    lastDetails = {};
+    lastCareGuide = "";
 
-    let issues = [];
-
-    if (symptoms.includes("brown") || symptoms.includes("dead")) {
-      healthScore -= 40;
-      issues.push("Possible dead or dying tissue");
-    }
-
-    if (symptoms.includes("rot") || symptoms.includes("soft")) {
-      healthScore -= 30;
-      issues.push("Possible root or trunk rot");
-    }
-
-    if (soil.includes("Wet")) {
-      healthScore -= 15;
-      issues.push("Soil may be too wet");
-    }
-
-    if (sunlight === "Shade") {
-      healthScore -= 10;
-      issues.push("Low sunlight exposure");
-    }
-
-    healthScore = Math.max(0, healthScore);
-
-    let status = "Healthy";
-    if (healthScore < 70) status = "Stressed";
-    if (healthScore < 40) status = "Critical";
-
-    const report = `
-PLANT REPORT
-============
-
-Name:
-${name}
-
-Scientific Name:
-${scientific}
-
-Confidence:
-${confidence}
-
-HEALTH
-------
-Score: ${healthScore}/100
-Status: ${status}
-
-Issues:
-${issues.length ? issues.join("\n") : "None"}
-
-CARE GUIDE
-----------
-Sunlight:
-${sunlight}
-
-Soil:
-${soil}
-
-Watering:
-- Water deeply 2-3x per week
-- Avoid overwatering
-
-Planting:
-- Keep root flare visible
-- Do not bury trunk
-
-Mulch:
-- Keep mulch away from trunk
-
-PLACEMENT ADVICE
-----------------
-- Ensure correct sunlight
-- Avoid soggy soil
-- Give plant room to grow
-
-`;
-
-    document.getElementById("report").textContent = report;
+    buildReport();
 
   } catch (err) {
     console.error(err);
-    document.getElementById("report").textContent = "Error connecting to API.";
+    reportBox.textContent = "Error connecting to the API. Check your Vercel function, environment variable, and deployment.";
   }
+}
+
+function buildReport() {
+  const symptoms = document.getElementById("symptoms").value.toLowerCase();
+  const sunlight = document.getElementById("sunlight").value;
+  const soil = document.getElementById("soil").value;
+  const notes = document.getElementById("notes").value || "No notes entered.";
+
+  let healthScore = 100;
+  let concerns = [];
+  let recommendations = [];
+
+  if (symptoms.includes("brown under bark") || symptoms.includes("no green") || symptoms.includes("dead")) {
+    healthScore -= 45;
+    concerns.push("Scratch test or visible symptoms suggest dead tissue.");
+    recommendations.push("Scratch test lower on the trunk and branches. If all areas are brown/tan and dry, the plant is likely dead.");
+  }
+
+  if (symptoms.includes("rot") || symptoms.includes("soft trunk") || symptoms.includes("black trunk") || symptoms.includes("black bark")) {
+    healthScore -= 35;
+    concerns.push("Possible trunk or root crown rot.");
+    recommendations.push("Check the base of the plant. Soft, black, or rotting bark near the root crown is a serious warning sign.");
+  }
+
+  if (symptoms.includes("yellow")) {
+    healthScore -= 15;
+    concerns.push("Yellowing leaves may indicate watering, nutrient, drainage, pest, or sunlight stress.");
+    recommendations.push("Check soil moisture before watering and inspect leaves for pests or spotting.");
+  }
+
+  if (symptoms.includes("spots") || symptoms.includes("fungus") || symptoms.includes("mold")) {
+    healthScore -= 20;
+    concerns.push("Leaf spots or fungal symptoms may be present.");
+    recommendations.push("Improve airflow, avoid overhead watering, and remove severely affected leaves.");
+  }
+
+  if (symptoms.includes("bugs") || symptoms.includes("insects") || symptoms.includes("pest")) {
+    healthScore -= 20;
+    concerns.push("Possible pest pressure.");
+    recommendations.push("Inspect the underside of leaves and stems for insects, eggs, sticky residue, or webbing.");
+  }
+
+  if (symptoms.includes("wilting")) {
+    healthScore -= 20;
+    concerns.push("Wilting may indicate water stress, root problems, transplant shock, or heat stress.");
+    recommendations.push("Check soil moisture 3-4 inches deep before adding water.");
+  }
+
+  if (soil.includes("Wet")) {
+    healthScore -= 15;
+    concerns.push("Soil may be staying too wet.");
+    recommendations.push("Improve drainage and avoid planting too deep.");
+  }
+
+  if (soil.includes("Clay")) {
+    healthScore -= 10;
+    concerns.push("Clay or compacted soil may restrict root growth.");
+    recommendations.push("Loosen the planting area wider than the root ball and avoid compacting the soil.");
+  }
+
+  if (sunlight.includes("shade")) {
+    healthScore -= 10;
+    concerns.push("Location may be too shaded for many flowering or fruiting plants.");
+    recommendations.push("Fruit trees usually need a sunnier, more open spot.");
+  }
+
+  healthScore = Math.max(0, healthScore);
+
+  let status = "Healthy / Low Concern";
+  if (healthScore < 75) status = "Stressed / Monitor Closely";
+  if (healthScore < 50) status = "High Concern";
+  if (healthScore < 30) status = "Critical / Possibly Dying";
+
+  const report = `
+PLANT IDENTIFICATION + HEALTH REPORT
+====================================
+
+IDENTIFICATION
+--------------
+Common Name:
+${lastPlantName}
+
+Scientific Name:
+${lastScientificName}
+
+Confidence:
+${lastConfidence}
+
+
+HEALTH STATUS
+-------------
+Health Score:
+${healthScore}/100
+
+Status:
+${status}
+
+Detected Concerns:
+${concerns.length ? concerns.map(c => "- " + c).join("\n") : "- No major concerns entered."}
+
+
+RECOMMENDED ACTIONS
+-------------------
+${recommendations.length ? recommendations.map(r => "- " + r).join("\n") : "- Continue monitoring watering, sunlight, soil drainage, and new growth."}
+
+
+USER OBSERVATIONS
+-----------------
+Selected Sunlight:
+${sunlight}
+
+Selected Soil:
+${soil}
+
+Symptoms:
+${symptoms || "No symptoms entered."}
+
+Notes:
+${notes}
+
+
+GENERAL CARE GUIDE
+------------------
+Watering:
+- Water deeply at the root zone.
+- Newly planted trees and shrubs need consistent moisture during the first growing season.
+- Avoid keeping the root crown soggy.
+
+Mulch:
+- Mulch in a wide ring.
+- Keep mulch 3-6 inches away from the trunk.
+- Do not create a mulch volcano.
+
+Planting Depth:
+- Keep the root flare visible.
+- Do not bury the trunk.
+
+Pruning:
+- Remove dead, damaged, or diseased branches.
+- Avoid heavy pruning on a stressed new plant unless necessary.
+
+Health Checks:
+- Green under bark usually means that area is alive.
+- Brown/tan dry tissue usually means that area is dead.
+- Soft, black, or rotting bark near the base is a major warning sign.
+
+
+YARD PLACEMENT REPORT
+---------------------
+${placementAdvice}
+`;
+
+  document.getElementById("report").textContent = report;
+}
+
+async function startYardCamera() {
+  try {
+    const yardCamera = document.getElementById("yardCamera");
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "environment" }
+    });
+
+    yardCamera.srcObject = stream;
+    yardCamera.style.display = "block";
+    document.getElementById("yardOverlay").style.display = "block";
+
+    startCompass();
+  } catch (err) {
+    alert("Yard camera access denied or unavailable.");
+  }
+}
+
+function startCompass() {
+  if (window.DeviceOrientationEvent) {
+    window.addEventListener("deviceorientation", function(event) {
+      let heading = event.webkitCompassHeading || event.alpha;
+
+      if (heading !== null && heading !== undefined) {
+        let direction = getDirection(heading);
+        document.getElementById("directionBadge").textContent = `Direction: ${direction} (${Math.round(heading)}°)`;
+      }
+    }, true);
+  }
+}
+
+function getDirection(deg) {
+  if (deg >= 337.5 || deg < 22.5) return "North";
+  if (deg >= 22.5 && deg < 67.5) return "Northeast";
+  if (deg >= 67.5 && deg < 112.5) return "East";
+  if (deg >= 112.5 && deg < 157.5) return "Southeast";
+  if (deg >= 157.5 && deg < 202.5) return "South";
+  if (deg >= 202.5 && deg < 247.5) return "Southwest";
+  if (deg >= 247.5 && deg < 292.5) return "West";
+  return "Northwest";
+}
+
+function analyzePlacement() {
+  const sunlight = document.getElementById("sunlight").value;
+  const soil = document.getElementById("soil").value;
+
+  let score = 100;
+  let notes = [];
+
+  if (sunlight.includes("Full sun")) {
+    notes.push("Good sunlight for most fruit trees, flowering plants, and sun-loving shrubs.");
+  } else if (sunlight.includes("Partial")) {
+    score -= 20;
+    notes.push("Partial sun may work for some plants, but fruiting and flowering may be reduced.");
+  } else if (sunlight.includes("shade")) {
+    score -= 40;
+    notes.push("Mostly shade is not ideal for most fruit trees or sun-loving plants.");
+  } else {
+    score -= 10;
+    notes.push("Sunlight is unknown. Track this spot for a full day before planting.");
+  }
+
+  if (soil.includes("Well")) {
+    notes.push("Good drainage is a strong positive.");
+  } else if (soil.includes("Wet")) {
+    score -= 35;
+    notes.push("Wet or soggy soil can cause root rot. Consider a raised mound or a different spot.");
+  } else if (soil.includes("Dry")) {
+    score -= 15;
+    notes.push("Dry soil may require mulch and deeper watering.");
+  } else if (soil.includes("Clay")) {
+    score -= 20;
+    notes.push("Clay/compact soil may restrict roots and hold water.");
+  }
+
+  if (
+    lastPlantName.toLowerCase().includes("apple") ||
+    lastPlantName.toLowerCase().includes("peach") ||
+    lastPlantName.toLowerCase().includes("pear")
+  ) {
+    if (!sunlight.includes("Full")) {
+      score -= 20;
+      notes.push("Fruit trees generally need full sun to thrive and produce well.");
+    }
+  }
+
+  score = Math.max(0, score);
+
+  let placementStatus = "Good";
+  if (score < 75) placementStatus = "Fair";
+  if (score < 50) placementStatus = "Poor";
+
+  placementAdvice = `
+Placement Score: ${score}/100
+Placement Status: ${placementStatus}
+
+Placement Notes:
+${notes.map(n => "- " + n).join("\n")}
+
+Visual Camera Reminder:
+- Avoid planting too close to large trees.
+- Avoid low spots where water collects.
+- Avoid areas where the trunk will be shaded all day.
+- Give the plant room for mature height and width.
+- Keep the root flare visible when planting.
+`;
+
+  document.getElementById("placementBadge").textContent = `Placement: ${placementStatus} (${score}/100)`;
+  document.getElementById("placementText").textContent = placementAdvice;
+
+  buildReport();
 }
 
 function downloadReport() {
@@ -289,10 +572,9 @@ function downloadReport() {
 
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
-  link.download = "plant-report.txt";
+  link.download = "plant-health-report-v3.txt";
   link.click();
 }
-
 </script>
 
 </body>
