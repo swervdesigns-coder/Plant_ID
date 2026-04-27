@@ -1,11 +1,3 @@
-export const config = {
-  api: {
-    bodyParser: {
-      sizeLimit: "10mb",
-    },
-  },
-};
-
 export default async function handler(req, res) {
   const API_KEY = process.env.OPENAI_API_KEY;
 
@@ -15,65 +7,43 @@ export default async function handler(req, res) {
 
   if (!API_KEY) {
     return res.status(500).json({
-      error: "Missing OPENAI_API_KEY in Vercel environment variables.",
+      error: "Missing OPENAI_API_KEY"
     });
   }
 
   try {
     const { imageBase64, sunlight, soil, symptoms, notes } = req.body;
 
-    if (!imageBase64) {
-      return res.status(400).json({ error: "No image provided." });
+    if (!imageBase64 || !imageBase64.startsWith("data:image")) {
+      return res.status(400).json({
+        error: "Invalid image format. Must be base64 data URL."
+      });
     }
 
     const prompt = `
-You are a plant identification and plant health assistant.
+You are a plant expert.
 
-Analyze the uploaded plant photo and the user-provided conditions.
+Analyze this plant image and provide:
 
-Return a detailed, practical report with these sections:
-
-1. Plant Identification
-- Common name
-- Scientific name if possible
-- Confidence level
-- Similar possibilities if uncertain
-
-2. Health Status
-- Overall health score from 0-100
-- Health status: Healthy, Stressed, High Concern, Critical, or Likely Dead
-- What appears to be going on with the plant
-
-3. What the Plant Needs
-- Sunlight
-- Watering
-- Soil/drainage
-- Mulch
-- Fertilizer
-- Pruning
-- Pest/disease concerns
-
-4. Placement Advice
-- Whether the selected yard condition sounds appropriate
-- What to change if placement is poor
-
-5. Next Steps
-- Clear action list
+1. Plant identification (common + scientific name)
+2. Confidence level
+3. Health status (score 0–100)
+4. What is wrong with the plant (if anything)
+5. What the plant needs (sunlight, water, soil, care)
+6. Specific action steps
 
 User conditions:
-Sunlight: ${sunlight || "Not provided"}
-Soil/drainage: ${soil || "Not provided"}
-Visible symptoms: ${symptoms || "Not provided"}
-Extra notes: ${notes || "Not provided"}
-
-Be honest if identification is uncertain.
+Sunlight: ${sunlight}
+Soil: ${soil}
+Symptoms: ${symptoms}
+Notes: ${notes}
 `;
 
-    const openaiRes = await fetch("https://api.openai.com/v1/responses", {
+    const response = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${API_KEY}`,
-        "Content-Type": "application/json",
+        "Content-Type": "application/json"
       },
       body: JSON.stringify({
         model: "gpt-4.1-mini",
@@ -84,21 +54,20 @@ Be honest if identification is uncertain.
               { type: "input_text", text: prompt },
               {
                 type: "input_image",
-                image_url: imageBase64,
-                detail: "high",
-              },
-            ],
-          },
-        ],
-      }),
+                image_url: imageBase64   // ✅ THIS is the fix
+              }
+            ]
+          }
+        ]
+      })
     });
 
-    const data = await openaiRes.json();
+    const data = await response.json();
 
-    if (!openaiRes.ok) {
-      return res.status(openaiRes.status).json({
+    if (!response.ok) {
+      return res.status(response.status).json({
         error: "OpenAI API error",
-        details: data,
+        details: data
       });
     }
 
@@ -108,10 +77,11 @@ Be honest if identification is uncertain.
       "No report returned.";
 
     return res.status(200).json({ report });
+
   } catch (error) {
     return res.status(500).json({
       error: "Server error",
-      details: error.message,
+      details: error.message
     });
   }
 }
