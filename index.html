@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Plant Health App V3</title>
+<title>Plant Health App</title>
 
 <style>
 body {
@@ -13,6 +13,7 @@ body {
   padding: 20px;
   color: #1f2d1f;
 }
+
 .container {
   max-width: 1000px;
   margin: auto;
@@ -21,7 +22,11 @@ body {
   border-radius: 16px;
   box-shadow: 0 5px 20px rgba(0,0,0,0.12);
 }
-h1, h2 { color: #2f6b35; }
+
+h1, h2 {
+  color: #2f6b35;
+}
+
 .section {
   margin-top: 20px;
   padding: 18px;
@@ -29,11 +34,13 @@ h1, h2 { color: #2f6b35; }
   border-radius: 14px;
   background: #fbfdfb;
 }
+
 label {
   display: block;
   font-weight: bold;
   margin-top: 12px;
 }
+
 input, select, textarea, button {
   width: 100%;
   padding: 12px;
@@ -43,6 +50,7 @@ input, select, textarea, button {
   font-size: 16px;
   box-sizing: border-box;
 }
+
 button {
   background: #2f6b35;
   color: white;
@@ -50,13 +58,18 @@ button {
   font-weight: bold;
   cursor: pointer;
 }
-button:hover { background: #245529; }
+
+button:hover {
+  background: #245529;
+}
+
 img {
   max-width: 100%;
   margin-top: 12px;
   border-radius: 14px;
   border: 1px solid #ccc;
 }
+
 #report {
   white-space: pre-wrap;
   background: #eef6ec;
@@ -72,7 +85,7 @@ img {
 <body>
 
 <div class="container">
-  <h1>🌿 Plant Health & Care Report App</h1>
+  <h1>🌿 Plant Identification + Health Report</h1>
 
   <div class="section">
     <h2>1. Add Plant Photo</h2>
@@ -106,10 +119,10 @@ img {
     </select>
 
     <label>Visible Symptoms</label>
-    <textarea id="symptoms" rows="5" placeholder="Example: yellow leaves, brown under bark, black trunk, soft base, leaf spots, bugs, wilting, no leaves, etc."></textarea>
+    <textarea id="symptoms" rows="5" placeholder="Example: yellow leaves, brown bark, black trunk, soft base, spots, bugs, wilting, etc."></textarea>
 
     <label>Extra Notes</label>
-    <textarea id="notes" rows="4" placeholder="Example: planted last month, in wooded area, watered twice per week, recently transplanted, etc."></textarea>
+    <textarea id="notes" rows="4" placeholder="Example: recently planted, watered twice per week, in wooded area, etc."></textarea>
   </div>
 
   <div class="section">
@@ -120,25 +133,24 @@ img {
 </div>
 
 <script>
-let selectedFile = null;
 let imageBase64 = null;
 
 const preview = document.getElementById("preview");
 
 document.getElementById("imageUpload").addEventListener("change", function(e) {
-  selectedFile = e.target.files[0];
+  const file = e.target.files[0];
 
-  if (!selectedFile) return;
+  if (!file) return;
 
   const reader = new FileReader();
 
   reader.onload = function(ev) {
-    imageBase64 = ev.target.result;
+    imageBase64 = ev.target.result; // ✅ must be data:image/... base64
     preview.src = imageBase64;
     preview.style.display = "block";
   };
 
-  reader.readAsDataURL(selectedFile);
+  reader.readAsDataURL(file);
 });
 
 async function identifyPlant() {
@@ -148,7 +160,7 @@ async function identifyPlant() {
   }
 
   const reportBox = document.getElementById("report");
-  reportBox.textContent = "Analyzing plant photo and building full health report...";
+  reportBox.textContent = "Analyzing plant photo and building report...";
 
   const sunlight = document.getElementById("sunlight").value;
   const soil = document.getElementById("soil").value;
@@ -174,11 +186,12 @@ async function identifyPlant() {
 
     if (!res.ok) {
       reportBox.textContent =
-        "Error generating report.\n\n" + JSON.stringify(data, null, 2);
+        "Error generating report:\n\n" + JSON.stringify(data, null, 2);
       return;
     }
 
     reportBox.textContent = data.report || "No report returned.";
+
   } catch (err) {
     reportBox.textContent =
       "Error connecting to API.\n\n" + err.message;
